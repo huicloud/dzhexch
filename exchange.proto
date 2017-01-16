@@ -1,0 +1,156 @@
+syntax="proto3";
+
+option java_multiple_files = true;
+option java_package = "com.dzhyun.exchange";
+
+
+package dzhexch;
+
+
+/*
+本API基于双向认证的HTPPS之上的gRPC，数据传输的安全性由HTTPS保证，使用者应该妥善保管其证书。
+同时，对于每一个使用者，为其分配了一个 appid 和 secret , 用于创建交易所等需要二次认证的服务。
+*/
+
+service ExchangeAPI {
+    // 创建交易所
+    rpc New(NewRequest) returns (NewReply) {}
+    // 新增交易品种
+    rpc NewSymbols(SymbolsRequest) returns (Status) {}
+    // 删除交易品种，同时删除相关的分时、K线
+    rpc RmSymbols(SymbolsRequest) returns (Status) {}
+    // 重命名交易品种
+    rpc RenameSymbols(SymbolsRequest) returns (Status) {}
+    // 开盘
+    rpc OpenMarket(OpenMarketRequest) returns (Status) {}
+    // 收盘
+    rpc CloseMarket(CloseMarketRequest) returns (Status) {}
+    // 更新报价
+    rpc Report(stream ReportRequest) returns (Status) {}
+}
+
+// 状态描述，每一个API都会返还状态描述，code 为 0 时表示成功，其他为失败，失败的文本描述在 desc 里
+message Status {
+    // 状态码
+    int32 code = 1;
+    // 状态描述文本
+    string desc = 2;
+}
+
+// 表示一个交易品种
+message Symbol {
+    // 品种代码，在一个交易所内唯一
+    string code = 1;
+    // 品种的中文名称
+    string name = 2;
+}
+
+// 交易品种价格，在收盘或清盘时，可以用于更新当前盘面
+message SymbolPrice {
+    // 交易品种
+    Symbol symbol = 1;
+    // 时间
+    int64 time = 2;
+    // 价格
+    double price = 3;
+    // 成交量
+    double volume = 4;
+}
+
+// 买卖盘
+message BidAsk {
+    // 价格
+    double price = 1;
+    // 量
+    double volume = 2;
+}
+
+// 报价
+message Report {
+    // 交易品种
+    Symbol symbol = 1;
+    // 递增的序号，每品种独立，在一次交易周期内，小于服务器的序号会被丢弃，开盘时服务器序号会零0
+    int32 sn = 2;
+    // 报价时间
+    int64 time = 3;
+    // 价格
+    double price = 4;
+    // 量
+    double volume = 5;
+    // 卖盘
+    repeated BidAsk bid = 6;
+    // 买盘
+    repeated BidAsk ask = 7;
+}
+
+// 交易时间段
+// 交易时间段以周为周期 
+// 1000000 为周一的00点00分00秒
+// 7235959 为周日的23点59分59秒
+// 其他以此类推
+message TradeSection {
+    // 开始时间
+    int32 start = 1;
+    // 结束时间
+    int32 stop = 2;
+    // 类型，集合竞价，交易、茶歇、……
+    int32 type = 3;
+}
+
+// 新建交易所请求
+message NewRequest {
+    // 分配的appid
+    string appid = 1;
+    // 分配的密码
+    string secret = 2;
+    // 交易所名称，如有重复返回失败
+    string name = 3;
+    // 交易所前缀，如有重复返回失败
+    string prefix = 4;
+    // 交易时间段
+    repeated TradeSection tradesections = 5;
+}
+
+// 新建交易所返回
+message NewReply {
+    // 状态
+    Status status = 1;
+    // 如果成功，则返回该交易所的唯一标示，可以保留待用，注意保密
+    string uuid = 2;
+}
+
+// 品种操作请求
+message SymbolsRequest{
+    // 交易所标示
+    string uuid = 1;
+    // 品种信息
+    repeated Symbol symboles = 2;
+}
+
+// 开盘请求
+message OpenMarketRequest {
+    // 交易所标示
+    string uuid = 1;
+    // 类型
+    int32 type = 2;
+    // 待更新的昨收价列表
+    repeated SymbolPrice lastprices = 3;
+}
+
+// 收盘请求
+message CloseMarketRequest {
+    // 交易所标示
+    string uuid = 1;
+    // 类型
+    int32 type = 2;
+    // 待更新的盘面价量列表
+    repeated SymbolPrice prices = 3;
+}
+
+// 报价
+message ReportRequest {
+    // 交易所标示
+    string uuid = 1;
+    // 报价
+    repeated Report reports = 2;
+}
