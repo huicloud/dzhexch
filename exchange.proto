@@ -21,12 +21,21 @@ service ExchangeAPI {
     rpc RmSymbols(SymbolsRequest) returns (Status) {}
     // 重命名交易品种
     rpc RenameSymbols(SymbolsRequest) returns (Status) {}
+    // 获取当前的品种列表，当请求时，如果不设置 SymbolsRequest.symboles ，返回所有的品种列表，否则返回指定的品种列表
+    rpc GetSymbos(SymbolsRequest) returns (SymbolsReply) {}
     // 开盘
     rpc OpenMarket(OpenMarketRequest) returns (Status) {}
     // 收盘
     rpc CloseMarket(CloseMarketRequest) returns (Status) {}
     // 更新报价
     rpc Report(stream ReportRequest) returns (Status) {}
+    // 报价状态，在重连后，应该查询服务端的状态，以确定该从哪个包进行发送
+    rpc GetReportStatus(Empty) returns (ReportStatus) {}
+}
+
+// 空
+message Empty {
+
 }
 
 // 状态描述，每一个API都会返还状态描述，code 为 0 时表示成功，其他为失败，失败的文本描述在 desc 里
@@ -35,6 +44,8 @@ message Status {
     int32 code = 1;
     // 状态描述文本
     string desc = 2;
+    // 用户数据
+    string userdata = 3;
 }
 
 // 表示一个交易品种
@@ -43,18 +54,18 @@ message Symbol {
     string code = 1;
     // 品种的中文名称
     string name = 2;
-}
-
-// 交易品种价格，在收盘或清盘时，可以用于更新当前盘面
-message SymbolPrice {
-    // 交易品种
-    Symbol symbol = 1;
-    // 时间
-    int64 time = 2;
-    // 价格
-    double price = 3;
-    // 成交量
-    double volume = 4;
+    // 交易单位
+    double tradeUnit = 3;
+    // 报价单位
+    double priceUnit = 4;
+    // 涨停
+    double limitUp = 5;
+    // 跌停
+    double limitDown = 6;
+    // 品种类型
+    string type = 7;
+    // 过期时间
+    int64 expireDate = 8;
 }
 
 // 买卖盘
@@ -65,22 +76,39 @@ message BidAsk {
     double volume = 2;
 }
 
+
 // 报价
+/*
+如果 symbol 为空，表示数据无意义
+其他字段均为可选，为空时不做处理，请注意，为空和0值的区别
+*/
 message Report {
     // 交易品种
     Symbol symbol = 1;
-    // 递增的序号，每品种独立，在一次交易周期内，小于服务器的序号会被丢弃，开盘时服务器序号会零0
-    int32 sn = 2;
     // 报价时间
-    int64 time = 3;
+    int64 time = 2;
     // 价格
-    double price = 4;
+    double price = 3;
     // 量
-    double volume = 5;
+    double volume = 4;
     // 卖盘
-    repeated BidAsk bid = 6;
+    repeated BidAsk bid = 5;
     // 买盘
-    repeated BidAsk ask = 7;
+    repeated BidAsk ask = 6;
+    // 交易类型
+    int64 tradeType = 7;
+    // 交易方向
+    int64 tradeDriection = 8;
+    // 昨收价
+    double previousPrice = 9;
+    // 结算价
+    double settlementPrice = 10;
+    // 昨结算价
+    double previousSettlementPrice = 11;
+    // 状态 0 为正常交易，其他值为停止交易，具体的解释见 statusReason，如 [停牌、假期等]
+    int64 status = 12;
+    // 状态描述
+    string statusReason = 13;
 }
 
 // 交易时间段
@@ -127,6 +155,13 @@ message SymbolsRequest{
     repeated Symbol symboles = 2;
 }
 
+// 品种列表返回
+message SymbolsReply{
+    Status status = 1;
+    // 品种信息
+    repeated Symbol symboles = 2;
+}
+
 // 开盘请求
 message OpenMarketRequest {
     // 交易所标示
@@ -134,7 +169,7 @@ message OpenMarketRequest {
     // 类型
     int32 type = 2;
     // 待更新的昨收价列表
-    repeated SymbolPrice lastprices = 3;
+    repeated Report last = 3;
 }
 
 // 收盘请求
@@ -144,13 +179,25 @@ message CloseMarketRequest {
     // 类型
     int32 type = 2;
     // 待更新的盘面价量列表
-    repeated SymbolPrice prices = 3;
+    repeated Report prices = 3;
 }
 
 // 报价
 message ReportRequest {
     // 交易所标示
     string uuid = 1;
+    // 递增的序号，在一次交易周期内，小于服务器的序号会被丢弃，开盘时服务器序号会零0
+    uint64 sn = 2;
+    // 用户数据 在 status 里原样返回
+    string userdata = 3;
     // 报价
-    repeated Report reports = 2;
+    repeated Report reports = 4;
+}
+
+// 报价状态
+message ReportStatus {
+    // 请求是否成功
+    Status status = 1;
+    // 当前收到的最后一个包号
+    uint64 sn = 2;
 }
