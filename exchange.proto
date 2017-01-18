@@ -22,7 +22,7 @@ service ExchangeAPI {
     // 重命名交易品种
     rpc RenameSymbols(SymbolsRequest) returns (Status) {}
     // 获取当前的品种列表，当请求时，如果不设置 SymbolsRequest.symboles ，返回所有的品种列表，否则返回指定的品种列表
-    rpc GetSymbos(SymbolsRequest) returns (SymbolsReply) {}
+    rpc GetSymbols(SymbolsRequest) returns (SymbolsReply) {}
     // 开盘
     rpc OpenMarket(OpenMarketRequest) returns (Status) {}
     // 收盘
@@ -31,6 +31,10 @@ service ExchangeAPI {
     rpc Report(stream ReportRequest) returns (Status) {}
     // 报价状态，在重连后，应该查询服务端的状态，以确定该从哪个包进行发送
     rpc GetReportStatus(Empty) returns (ReportStatus) {}
+    // 创建或更新板块
+    rpc UpdateBlock(BlockRequest) returns (Status) {}
+    // 删除板块
+    rpc RmBlock(BlockRequest) returns (Status) {}
 }
 
 // 空
@@ -49,6 +53,7 @@ message Status {
 }
 
 // 表示一个交易品种
+// 大多数情况下，仅需要填写 code 字段，其他置空即可
 message Symbol {
     // 品种代码，在一个交易所内唯一
     string code = 1;
@@ -85,7 +90,7 @@ message BidAsk {
 message Report {
     // 交易品种
     Symbol symbol = 1;
-    // 报价时间
+    // 报价时间，时间格式为自 1970.1.1 00::00::00 UTC 的纳秒数(10e-9)
     int64 time = 2;
     // 价格
     double price = 3;
@@ -164,6 +169,18 @@ message SymbolsReply{
     Status status = 1;
     // 品种信息
     repeated Symbol symboles = 2;
+}
+
+// 板块请求
+message BlockRequest {
+    // 交易所标示
+    string uuid = 1;
+    // 用户数据
+    string userdata = 2;
+    // 板块路径
+    string path = 3;
+    // 品种列表
+    repeated Symbol symboles = 4;
 }
 
 // 开盘请求
