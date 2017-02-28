@@ -6,7 +6,7 @@
 1. 提供键盘宝API，通过输入拼音简称、全称、代码、汉字等各种方式，获取到相应的商品。
 2. 对行情数据进行归档，产生分时、分钟线、K线等历史数据
 3. 提供将行情分发至客户端的API。
-4. 提供行情展示的开源客户端，包括移动APP、WEB以及PC
+4. 提供行情展示的开源客户端，包括[移动APP](https://github.com/huicloud/mobile) 、 [WEB](https://github.com/huicloud/web-template) 以及 [PC](https://github.com/huicloud/pc)
 
 # 性能指标
 
